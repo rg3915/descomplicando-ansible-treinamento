@@ -3,6 +3,7 @@
     module: ec2_group
     name: "{{ security_group }}"
     description: Security Group Giropops
+    profile: "{{ profile }}"
     region: "{{ region }}"
     rules:
     - proto: tcp
@@ -23,6 +24,7 @@
     region={{ region }}
     keypair={{ keypair }}
     count={{ count }}
+    profile={{ profile }}
   register: ec2
 
 - name: Adicionando a instancia ao inventario temp
@@ -44,7 +46,7 @@
   with_items: "{{ ec2.instances }}"
 
 - name: Adicionando um nome tag na instancia
-  local_action: ec2_tag resource={{ item.id }} region={{ region }} state=present
+  local_action: ec2_tag resource={{ item.id }} region={{ region }} profile={{ profile }} state=present
   with_items: "{{ ec2.instances }}"
   args:
     tags:
