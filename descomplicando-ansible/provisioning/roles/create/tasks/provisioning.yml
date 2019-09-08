@@ -31,11 +31,18 @@
   add_host: name={{ item.public_ip }} groups=giropops-new
   with_items: "{{ ec2.instances }}"
 
-- name: Adicionando a instancia criada no arquivo hosts
+- name: Adicionando o ip publico da instancia criada no arquivo hosts
   local_action: lineinfile
     dest="./hosts"
     regexp={{ item.public_ip }}
-    insertafter="[kubernetes]" line={{ item.public_ip }}
+    insertafter="[ip-publico]" line={{ item.public_ip }}
+  with_items: "{{ ec2.instances }}"
+
+- name: Adicionando o ip privado da instancia criada no arquivo hosts
+  local_action: lineinfile
+    dest="./hosts"
+    regexp={{ item.private_ip }}
+    insertafter="[ip-privado]" line={{ item.private_ip }}
   with_items: "{{ ec2.instances }}"
 
 - name: Esperando o SSH

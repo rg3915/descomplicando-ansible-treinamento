@@ -848,13 +848,105 @@ cd ~/gh/my/descomplicando-ansible-treinamento/descomplicando-ansible/install_k8s
 printf '\ndefault_kubernetes_cni_weavenet_manifestUrl: "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\\n')"' >> vars/main.yml
 ```
 
+Rode o playbook
+
+```
+cd ~/gh/my/descomplicando-ansible-treinamento/descomplicando-ansible/install_k8s
+ansible-playbook -i hosts main.yml -u ubuntu
+```
+
+Conecte-se nas novas máquinas. Abra 3 terminais, um pra cada máquina.
 
 
 
+```
+cd ~/gh/my/descomplicando-ansible-treinamento/descomplicando-ansible/provisioning
+ssh-add descomplicando-ansible.pem # nos 3 terminais
+ssh ubuntu@54.162.48.173
+ssh ubuntu@52.23.179.250
+ssh ubuntu@54.81.192.27
+```
 
+Em um deles rode:
 
+```
+sudo su -
+docker ps
+kubectl get nodes
+```
 
+Fazer join-workers
 
+```
+cd ~/gh/my/descomplicando-ansible-treinamento/descomplicando-ansible/install_k8s/roles/join-workers
+
+printf "\n- include: join-cluster.yml" >> tasks/main.yml
+
+cat << EOF > tasks/join-cluster.yml
+- name: 
+  debug:
+    msg: "[Worker] K8S_TOKEN_HOLDER K8S token is {{ hostvars['K8S_TOKEN_HOLDER']['token'] }}"
+
+- name:
+  debug:
+    msg: "[Worker] K8S_TOKEN_HOLDER K8S Hash is  {{ hostvars['K8S_TOKEN_HOLDER']['hash'] }}"
+
+- name: "Kubeadm reset node cluster config"
+  command: 
+    kubeadm reset --force
+  register: kubeadm-reset_node
+
+- name: "Kubeadm join"
+  shell: 
+    kubeadm join --token={{ hostvars['K8S_TOKEN_HOLDER']['token'] }}
+    --discovery-token-ca-cert-hash sha256:{{ hostvars['K8S_TOKEN_HOLDER']['hash'] }}
+    {{K8S_MASTER_NODE_IP}}:{{K8S_API_SECURE_PORT}}
+EOF
+```
+
+> Não pode ter swap ligada.
+
+Pra pegar o token do k8s
+
+```
+kubeadm token create --print-join-command
+```
+
+Editar hosts
+
+```
+cd install_k8s/hosts
+vim hosts
+
+[k8s-workers:vars]
+K8S_MASTER_NODE_IP=xxx.xx.xx.xxx
+K8S_API_SECURE_PORT=6443
+```
+
+Em `K8S_MASTER_NODE_IP` colocar IP interno Private IP.
+
+Na AWS, editar Security Groups
+
+Inbound
+
+Type: All trafic
+Protocol: All
+Source: custom
+
+Para o grupo 'giropops'.
+
+E rodar o playbook novamente.
+
+```
+ansible-playbook -i hosts main.yml -u ubuntu
+```
+
+Editar
+
+```
+cd ~/gh/my/descomplicando-ansible-treinamento/descomplicando-ansible/provisioning/roles/create/tasks
+vim provisioning.yml
+```
 
 
 ---
