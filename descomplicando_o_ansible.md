@@ -599,6 +599,32 @@ K8S_MASTER_NODE_IP=xxx.xx.xx.xxx
 K8S_API_SECURE_PORT=6443
 ```
 
+```
+# Criando arquivos
+cat << EOF > hosts
+[k8s-master]
+xx.xxx.xxx.xxx
+
+[k8s-workers]
+xx.xxx.xxx.xxx
+xx.xxx.xxx.xxx
+
+[k8s-workers:vars]
+K8S_MASTER_NODE_IP=xxx.xx.xx.xxx
+K8S_API_SECURE_PORT=6443
+EOF
+```
+
+Para editar os IPs, vá em provisioning/hosts e digite os novos IPs em install_k8s/hosts...
+
+```
+cat ../provisioning/hosts
+```
+
+... para editar o K8S_MASTER_NODE_IP, vá na AWS EC2 e pegue o IP privado da máquina que você definiu como master.
+
+
+
 Na pasta install_k8s...
 
 ```
@@ -676,3 +702,162 @@ ansible-playbook -i hosts main.yml -u ubuntu
 
 
 
+# Aula 3
+
+```
+ssh-agent
+ssh-add
+```
+
+https://www.freecodecamp.org/news/openssl-command-cheatsheet-b441be1e8c4a/
+
+https://www.weave.works/blog/weave-net-kubernetes-integration/
+
+https://docs.ansible.com/ansible/latest/user_guide/playbooks_checkmode.html
+
+
+```
+ansible-playbook -i hosts main.yml -u ubuntu
+
+ssh-add chave.pem
+```
+
+* provisiong
+* install
+* create
+
+```
+kubeadm token create --print-join-command 
+```
+
+
+## Começando a aula com dois playbooks:
+
+* provisioning
+* install_k8s
+
+E quatro pastas em `install_k8s`:
+
+* create-cluster
+* install-helm
+* install-k8s
+* join-workers
+
+Após instalado o k8s, precisamos fazer com que ele seja um cluster.
+
+
+Criando uma nova pasta com o conteúdo da aula2.
+
+```
+cp -r aula2/ descomplicando-ansible
+```
+
+Vá para a pasta `provisioning`. Certifique-se de ter colocado a chave.pem.
+
+```
+# Rodando o Ansible
+# Provisionando as máquinas
+# Criando as máquinas no EC2.
+ansible-playbook -i hosts main.yml -u ubuntu
+```
+
+
+## install-k8s
+
+Faça o mesmo na pasta `install_k8s`.
+
+```
+# Rodando o Ansible
+# Provisionando as máquinas
+# Criando as máquinas no EC2.
+ansible-playbook -i hosts main.yml -u ubuntu
+```
+
+Vá para a pasta...
+
+```
+cd ~/gh/my/descomplicando-ansible-treinamento/descomplicando-ansible/install_k8s/roles/create-cluster/tasks/
+```
+
+```
+printf "\n- include: init-cluster.yml" >> main.yml
+```
+
+Edite `init-cluster.yml`
+
+```
+cat << EOF > init-cluster.yml
+- name: Reset Cluster
+  command:
+    kubeadm reset --force
+  register: kubeadmin_init
+
+- name: Initialize Kubernetes master with kubeadm init.
+  command:
+    kubeadm init
+  register: kubeadmin_init
+
+- name: Ensure .kube directory exists.
+  file:
+    path: ~/.kube
+    state: directory
+
+- name: Symlink the kubectl admin.conf to ~/.kube/conf.
+  file:
+    src: /etc/kubernetes/admin.conf
+    dest: ~/.kube/config
+    state: link
+
+- name: Configure weavenet networking.
+  shell: kubectl apply -f {{ default_kubernetes_cni_weavenet_manifestUrl }}
+  register: weavenet_result
+
+- name: "Cluster token"
+  shell: kubeadm token list | cut -d ' ' -f1 | sed -n '2p'
+  register: K8S_TOKEN
+
+- name: "CA Hash"
+  shell: openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | openssl rsa -pubin -outform der 2>/dev/null | openssl dgst -sha256 -hex | sed 's/^.* //'
+  register: K8S_MASTER_CA_HASH
+
+- name: "Add K8S Token and Hash to dummy host"
+  add_host:
+    name:   "K8S_TOKEN_HOLDER"
+    token:  "{{ K8S_TOKEN.stdout }}"
+    hash:   "{{ K8S_MASTER_CA_HASH.stdout }}"
+
+- name:
+  debug:
+    msg: "[Master] K8S_TOKEN_HOLDER K8S token is {{ hostvars['K8S_TOKEN_HOLDER']['token'] }}"
+
+- name:
+  debug:
+    msg: "[Master] K8S_TOKEN_HOLDER K8S Hash is  {{ hostvars['K8S_TOKEN_HOLDER']['hash'] }}"
+EOF
+```
+
+
+
+
+
+
+
+
+
+
+
+---
+
+# Aula 4
+
+Copiar o arquivo
+
+cp files/app-v1.yml templates/
+
+Dai use só o arquivo que está no templates.
+
+Liberar as portas.
+
+cp install_k8s/main.yml deploy-app-v1/
+
+mv templates/app-v1.yml templates/app-v1.yml.j2

@@ -1,10 +1,10 @@
 [k8s-master]
-xx.xxx.xxx.xx
+xx.xxx.xxx.xxx
 
 [k8s-workers]
-xx.xxx.xxx.xx
-xx.xxx.xxx.xx
+xx.xxx.xxx.xxx
+xx.xxx.xxx.xxx
 
 [k8s-workers:vars]
-K8S_MASTER_NODE_IP=xx.xxx.xxx.xx
+K8S_MASTER_NODE_IP=xx.xxx.xxx.xxx
 K8S_API_SECURE_PORT=6443
