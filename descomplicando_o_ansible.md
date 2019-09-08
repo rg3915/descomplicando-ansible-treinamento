@@ -948,6 +948,93 @@ cd ~/gh/my/descomplicando-ansible-treinamento/descomplicando-ansible/provisionin
 vim provisioning.yml
 ```
 
+## Install-helm
+
+```
+cd ~/gh/my/descomplicando-ansible-treinamento/descomplicando-ansible/install_k8s/roles/install-helm/
+printf "\n- include: install-helm.yml\n- include: install-monit-tools.yml" >> tasks/main.yml
+```
+
+Editar install-helm.yml
+
+```
+cat << EOF > tasks/install-helm.yml
+- name: Install helm via curl
+  shell: curl -L https://git.io/get_helm.sh | bash -
+  register: helm_result
+
+- name: Helm init
+  shell: helm init
+  register: helm_init_result
+
+- name: Create service account to tiller
+  shell: kubectl create serviceaccount --namespace=kube-system tiller
+  register: tiller_result
+
+- name: Create clusterrolebinding for tiller
+  shell: kubectl create clusterrolebinding tiller-cluster-role --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
+  register: clusterrolebinding_result
+
+- name: Apply patch to tiller-deploy
+  shell: kubectl patch deployments -n kube-system tiller-deploy -p '{"spec":{"template":{"spec":{"serviceAccount":"tiller"}}}}'
+  register: patch_result
+
+- name: Waiting tiller pod
+  pause:
+    minutes: 2
+EOF
+```
+
+Editar install-monit-tools.yml
+
+```
+cat << EOF > tasks/install-monit-tools.yml
+- name: Install Prometheus
+  shell: helm install {{ deploy_prometheus }}
+  register: prometheus_result
+
+- name: Install Grafana
+  shell: helm install {{ deploy_grafana }}
+  register: grafana_result
+EOF
+```
+
+Edite `vars/main.yml`
+
+```
+printf '\ndeploy_prometheus: "--namespace=monitoring --name=prometheus --version=7.0.0 --set alertmanager.persistentVolume.enabled=false,server.persistentVolume.enabled=false stable/prometheus"' >> vars/main.yml
+
+printf '\ndeploy_grafana: "--namespace=monitoring --name=grafana --version=1.12.0 --set=adminUser=admin,adminPassword=admin,service.type=NodePort stable/grafana"' >> vars/main.yml
+```
+
+Entre no nó master, e
+
+```
+kubectl get deployment --all-namespaces
+kubectl get services -n monitoring
+kubectl get nodes
+```
+
+Vá em Security groups e libere a porta do Grafana
+
+Custom
+TCP
+port: 30730
+description: Grafana
+
+Entre em uma das máquinas pelo browser, na porta 30730
+
+Grafana: admin, admin
+
+No Grafana, clique em *Add Data Source*
+
+Name: Prometheus
+URL: http://prometheus-server
+
+```
+kubectl port-forward -n monitoring svc/prometheus-server --address 0.0.0.0 32000:80
+```
+
 
 ---
 
