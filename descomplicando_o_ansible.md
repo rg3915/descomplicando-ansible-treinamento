@@ -836,6 +836,17 @@ cat << EOF > init-cluster.yml
 EOF
 ```
 
+Editando vars
+
+Pesquise por Run Weave Net with Kubernetes in Just One Line
+
+https://www.weave.works/blog/weave-net-kubernetes-integration/
+
+
+```
+cd ~/gh/my/descomplicando-ansible-treinamento/descomplicando-ansible/install_k8s/roles/create-cluster
+printf '\ndefault_kubernetes_cni_weavenet_manifestUrl: "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\\n')"' >> vars/main.yml
+```
 
 
 

@@ -50,7 +50,7 @@
   with_items: "{{ ec2.instances }}"
   args:
     tags:
-      Name: regis-ansible-day2
+      Name: RegisAnsible
 
 - name: Adicionando a maquina criada no known_hosts
   shell: ssh-keyscan -H {{ item.public_ip }} >> ~/.ssh/known_hosts
