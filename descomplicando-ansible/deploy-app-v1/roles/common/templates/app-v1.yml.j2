@@ -13,8 +13,8 @@ spec:
         app: giropops
         version: {{ version }}
       annotations:
-        prometheus.io/scrape: {{ prometheus_scrape }}
-        prometheus.io/port: {{ prometheus_port }}
+        prometheus.io/scrape: "{{ prometheus_scrape }}"
+        prometheus.io/port: "{{ prometheus_port }}"
     spec:
       containers:
       - name: giropops
