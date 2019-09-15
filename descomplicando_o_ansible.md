@@ -1353,6 +1353,45 @@ cat << EOF > tasks/deploy-app.yml
 EOF
 ```
 
+```
+cd ~/gh/my/descomplicando-ansible-treinamento/descomplicando-ansible/canary-deploy-app/roles/common/
+
+cat << EOF > templates/app-v2-canary.yml.j2
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: giropops-v2
+spec:
+  replicas: {{ number_replicas }}
+  selector:
+    matchLabels:
+      app: giropops
+  template:
+    metadata:
+      labels:
+        app: giropops
+        version: {{ version }}
+      annotations:
+        prometheus.io/scrape: "{{ prometheus_scrape }}"
+        prometheus.io/port: "{{ prometheus_port }}"
+    spec:
+      containers:
+      - name: giropops
+        image: linuxtips/nginx-prometheus-exporter:{{ version }}
+        env:
+        - name: VERSION
+          value: {{ version }}
+        ports:
+        - containerPort: {{ nginx_port }}
+        - containerPort: {{ prometheus_port }}
+EOF
+```
+
+```
+cat << EOF > vars/main.yml
+
+EOF
+```
 
 
 
