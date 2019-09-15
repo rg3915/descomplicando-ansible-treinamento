@@ -1040,14 +1040,298 @@ kubectl port-forward -n monitoring svc/prometheus-server --address 0.0.0.0 32000
 
 # Aula 4
 
+
+```
+cd ~/gh/my/descomplicando-ansible-treinamento/descomplicando-ansible/
+
+mkdir deploy-app-v1
+cd deploy-app-v1
+
+cp ../install_k8s/hosts .
+
+mkdir roles
+cd roles
+```
+
+```
+ansible-galaxy init common
+
+cd common
+```
+
+```
+printf "\n- include: deploy-app.yml" >> tasks/main.yml
+```
+
+```
+cat << EOF > tasks/deploy-app.yml
+- name: Creating Giropops App directory
+  file: path={{ item }} state=directory
+  with_items:
+    - /opt/giropops
+    - /opt/giropops/logs
+    - /opt/giropops/conf
+  register: directory_app_register
+
+- name: Copying deployment file to host
+  template:
+    src: app-v1.yml.j2
+    dest: /opt/giropops/app-v1.yml
+    owner: root
+    group: root
+    mode: 0644
+  register: copying_template_register
+
+- name: Copying service file to host
+  copy: src={{ item.src }} dest={{ item.dest }}
+  with_items:
+    - { src: 'service-app.yml', dest: '/opt/giropops/service-app.yml' }
+  register: copying_register
+
+- name: Deploy Giropops App deployment
+  shell: kubectl apply -f /opt/giropops/app-v1.yml
+  register: deploy_deployment_register
+
+- name: Deploy Giropops App service
+  shell: kubectl apply -f /opt/giropops/service-app.yml
+  register: deploy_service_register
+EOF
+```
+
+Editar app-v1.yml
+
+```
+cat << EOF > files/app-v1.yml
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: giropops-v1
+spec:
+  replicas: {{ number_replicas }}
+  template:
+    metadata:
+      labels:
+        app: giropops
+        version: {{ version }}
+      annotations:
+        prometheus.io/scrape: {{ prometheus_scrape }}
+        prometheus.io/port: {{ prometheus_port }}
+    spec:
+      containers:
+      - name: giropops
+        image: linuxtips/nginx-prometheus-exporter:{{ version }}
+        env:
+        - name: VERSION
+          value: {{ version }}
+        ports:
+        - containerPort: {{ nginx_port }}
+        - containerPort: {{ prometheus_port }}
+EOF
+```
+
+```
+cat << EOF > files/service-app.yml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: giropops
+    run: nginx
+    track: stable
+  name: giropops
+  namespace: default
+spec:
+  externalTrafficPolicy: Cluster
+  ports:
+  - nodePort: 32222
+    name: http
+    port: 80
+    protocol: TCP
+    targetPort: 80
+  - nodePort: 32111
+    name: prometheus
+    port: 32111
+    protocol: TCP
+    targetPort: 32111
+  selector:
+    app: giropops
+  sessionAffinity: None
+  type: NodePort
+EOF
+```
+
+```
+cat << EOF > vars/main.yml
+---
+# vars file for common
+
+# Giropops app
+number_replicas: 10
+version: 1.0.0
+prometheus_scrape: "true"
+prometheus_port: 32111
+nginx_port: 80
+environment: production
+EOF
+```
+
 Copiar o arquivo
 
-cp files/app-v1.yml templates/
+cp files/app-v1.yml templates/app-v1.yml.j2
 
-Dai use só o arquivo que está no templates.
 
-Liberar as portas.
+```
+cd ../..
+cat << EOF > main.yml
+- hosts: k8s-master
+  become: yes
+  user: ubuntu
+  roles:
+  - common
+EOF
+```
 
-cp install_k8s/main.yml deploy-app-v1/
 
-mv templates/app-v1.yml templates/app-v1.yml.j2
+### Criar as máquinas e liberar as portas.
+
+Fazer:
+
+1. provisioning
+2. install_k8s
+3. deploy-app-v1
+
+```
+cd provisioning
+ansible-playbook -i hosts main.yml -u ubuntu
+```
+
+Não esqueça de limpar os ips de hosts
+
+Não esqueça de fazer ssh-add chave.pem
+
+```
+cd ../install_k8s
+ansible-playbook -i hosts main.yml -u ubuntu
+```
+
+Copiar o hosts para a pasta `deploy-app-v1`.
+
+```
+cd ../deploy-app-v1/
+cp ../install_k8s/hosts .
+```
+
+Rodar o playbook.
+
+```
+ansible-playbook -i hosts main.yml -u ubuntu
+```
+
+O erro sobre `kubectl apply -f` sobre selector, faça o seguinte:
+
+Entre no servidor e faça:
+
+```
+kubectl apply -f app-v1.yml
+```
+
+Depois edite `app-v1.yml`:
+
+```
+code here
+```
+
+
+
+
+
+
+
+
+# Aula 5
+
+* Criar uma máquina Ubuntu
+
+sudo su -
+
+# instalar ansible
+
+sudo apt install -y software-properties-common
+sudo apt-add-repository --yes --update ppa:ansible/ansible
+sudo apt update
+sudo apt install -y ansible
+
+# instalar docker
+
+curl -fsSL https://get.docker.com | bash -
+
+apt-get install -y python-pip
+
+pip install docker-compose==1.9.0
+
+apt-get install -y nodejs npm
+
+npm install npm --global
+
+Clonar o repo do Ansible awx
+
+git clone https://github.com/ansible/awx.git
+
+cd awx/installer
+
+cat install.yml
+cat inventory
+
+
+
+Gerar um secretkey
+
+openssl rand -hex 32
+
+...
+project_data_dir
+
+grep -v '^#' inventory | grep - '^$' > inventory_limpo
+
+---
+
+localhost ansible_connection=local ansible_python_interpreter="/usr/bin/env python"
+[all:vars]
+dockerhub_base=ansible
+awx_task_hostname=awx
+awx_web_hostname=awxweb
+postgres_data_dir=/var/lib/pgdocker
+host_port=8080
+host_port_ssl=443
+docker_compose_dir=/var/lib/awx
+pg_username=awx
+pg_password=giropops
+pg_admin_password=giropops
+pg_database=awx
+pg_port=5432
+rabbitmq_password=giropops
+rabbitmq_erlang_cookie=cookiemonster
+admin_user=admin
+admin_password=giropops
+create_preload_data=True
+secret_key=91f1db6f6d7691121bcfa62708d59c2cd3f4aa9bd6f6d25f261395684c659dd3
+project_data_dir=/var/lib/awx/projects
+
+---
+
+ansible-playbook -i inventory install.yml
+
+docker ps
+
+Security group
+
+All traffic
+
+Entra no ip
+
+Criar um projeto
+
+cd awx/project
+mkdir opa
+cd opa
+ansible-galaxy init opa
