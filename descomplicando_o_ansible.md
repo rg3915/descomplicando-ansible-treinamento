@@ -1467,6 +1467,102 @@ cat << EOF > tasks/deploy-app.yml
 EOF
 ```
 
+```
+cat << EOF > templates/app-v1.yml.j2
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: giropops-v1
+spec:
+  replicas: {{ number_replicas_old_version }}
+  selector:
+    matchLabels:
+      app: giropops
+  template:
+    metadata:
+      labels:
+        app: giropops
+        version: {{ old_version }}
+      annotations:
+        prometheus.io/scrape: "{{ prometheus_scrape }}"
+        prometheus.io/port: "{{ prometheus_port }}"
+    spec:
+      containers:
+      - name: giropops
+        image: linuxtips/nginx-prometheus-exporter:{{ old_version }}
+        env:
+        - name: VERSION
+          value: {{ old_version }}
+        ports:
+        - containerPort: {{ nginx_port }}
+        - containerPort: {{ prometheus_port }}
+EOF
+```
+
+```
+cat << EOF > templates/app-v2.yml.j2
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: giropops-v2
+spec:
+  replicas: {{ number_replicas_new_version }}
+  selector:
+    matchLabels:
+      app: giropops
+  template:
+    metadata:
+      labels:
+        app: giropops
+        version: {{ new_version }}
+      annotations:
+        prometheus.io/scrape: "{{ prometheus_scrape }}"
+        prometheus.io/port: "{{ prometheus_port }}"
+    spec:
+      containers:
+      - name: giropops
+        image: linuxtips/nginx-prometheus-exporter:{{ new_version }}
+        env:
+        - name: VERSION
+          value: {{ new_version }}
+        ports:
+        - containerPort: {{ nginx_port }}
+        - containerPort: {{ prometheus_port }}
+EOF
+```
+
+```
+cat << EOF > vars/main.yml
+---
+# vars file for common
+
+# Giropops app
+number_replicas_old_version: 1
+number_replicas_new_version: 10
+old_version: 1.0.0
+new_version: 2.0.0
+prometheus_scrape: "true"
+prometheus_port: 32111
+nginx_port: 80
+environment: production
+EOF
+```
+
+Copiando main e hosts
+
+```
+cd ~/gh/my/descomplicando-ansible-treinamento/descomplicando-ansible/deploy-app-v2
+cp ../deploy-app-v1/main.yml .
+cp ../deploy-app-v1/hosts .
+```
+
+Rodando o playbook
+
+```
+ansible-playbook -i hosts main.yml
+```
+
+
 
 # Aula 5
 
