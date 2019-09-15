@@ -1389,10 +1389,83 @@ EOF
 
 ```
 cat << EOF > vars/main.yml
+---
+# vars file for common
 
+# Giropops app
+number_replicas: 1
+version: 2.0.0
+prometheus_scrape: "true"
+prometheus_port: 32111
+nginx_port: 80
+environment: production
 EOF
 ```
 
+Depois copie
+
+```
+cd ~/gh/my/descomplicando-ansible-treinamento/descomplicando-ansible/
+cp deploy-app-v1/main.yml canary-deploy-app/
+cp deploy-app-v1/hosts canary-deploy-app/
+cd canary-deploy-app
+```
+
+Rode o playbook
+
+```
+ansible-playbook -i hosts main.yml
+```
+
+Para conferir no servidor, digite:
+
+```
+kubectl get deploy
+```
+
+Agora vamos em:
+
+```
+cd ~/gh/my/descomplicando-ansible-treinamento/descomplicando-ansible/deploy-app-v2/roles/common
+
+printf "\n- include: deploy-app.yml" >> tasks/main.yml
+
+cat << EOF > tasks/deploy-app.yml
+- name: Copying deployment file app v1 to host
+  template:
+    src: app-v1.yml.j2
+    dest: /opt/giropops/app-v1.yml
+    owner: root
+    group: root
+    mode: 0644
+  register: copying_app1_template_register
+
+- name: Copying deployment file app v2 to host
+  template:
+    src: app-v2.yml.j2
+    dest: /opt/giropops/app-v2.yml
+    owner: root
+    group: root
+    mode: 0644
+  register: copying_app2_template_register
+
+- name: Deploy new version of Giropops App deployment
+  shell: kubectl apply -f /opt/giropops/app-v2.yml
+  register: deployment_v2_register
+
+- name: Scale down old version of Giropops App deployment
+  shell: kubectl apply -f /opt/giropops/app-v1.yml
+  register: deployment_v1_register
+
+- name: The old version of Giropops App deployment will be removed in two minutes
+  pause:
+    minutes: 2
+
+- name: Delete old version of Giropops App deployment
+  shell: kubectl delete -f /opt/giropops/app-v1.yml
+  register: deployment_deleted_register
+EOF
+```
 
 
 # Aula 5
