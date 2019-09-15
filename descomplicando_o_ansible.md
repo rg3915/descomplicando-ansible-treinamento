@@ -1114,8 +1114,8 @@ spec:
         app: giropops
         version: {{ version }}
       annotations:
-        prometheus.io/scrape: {{ prometheus_scrape }}
-        prometheus.io/port: {{ prometheus_port }}
+        prometheus.io/scrape: "{{ prometheus_scrape }}"
+        prometheus.io/port: "{{ prometheus_port }}"
     spec:
       containers:
       - name: giropops
@@ -1238,12 +1238,120 @@ kubectl apply -f app-v1.yml
 Depois edite `app-v1.yml`:
 
 ```
-code here
+...
+replicas: {{ number_replicas }}
+  selector:
+    matchLabels:
+      app: giropops
 ```
 
+Se tudo der certo, você pode fazer:
+
+```
+# no servidor
+kubectl get svc
+```
+
+Depois vá na AWS, EC2, clique na instância e clique lá embaixo em Security groups.
+
+Inbound: All trafic, anywhere
+
+Você pode navegar a partir da url do servidor na porta 32222.
+
+http://PUBLIC_IP:32222
+
+```
+source <(kubectl completion bash)
+kubectl logs giropops-v1-689bf72kcus --follow # pra ver os logs
+```
+
+E
+
+http://PUBLIC_IP:32111/metrics
+
+Pra ver todos os outros serviços digite:
+
+```
+kubectl get svc --all-namespaces
+```
+
+O Grafana está na porta PORT.
+
+Add data source
+
+Name: Prometheus Server
+
+Type: Prometheus
+
+URL: http://prometheus-server
 
 
+New Dashboard > Graph > Edit
 
+Data Source: Prometheus Server
+
+```
+sum(rate(nginx_http_requests{app='giropops'}[5m])) by (version)
+```
+
+Legend format: {{version}}
+
+Display
+
+
+## App v2
+
+Crie deploy-app-v2
+
+```
+cd ~/gh/my/descomplicando-ansible-treinamento/descomplicando-ansible
+mkdir -p deploy-app-v2/roles
+cd deploy-app-v2/roles
+ansible-galaxy init common
+```
+
+Volte dois níveis...
+
+```
+cd ../..
+```
+
+Crie canary-deploy-app
+
+```
+mkdir -p canary-deploy-app/roles
+cd canary-deploy-app/roles
+ansible-galaxy init common
+```
+
+Em canary-deploy-app, faça:
+
+```
+cd ~/gh/my/descomplicando-ansible-treinamento/descomplicando-ansible/canary-deploy-app/roles/common
+```
+
+Crie uma task:
+
+```
+printf "\n- include: deploy-app.yml" >> tasks/main.yml
+```
+
+```
+cat << EOF > tasks/deploy-app.yml
+- name: Copying deployment file to host
+  template:
+    src: app-v2-canary.yml.j2
+    dest: /opt/giropops/app-v2-canary.yml
+    owner: root
+    group: root
+    mode: 0644
+  register: copying_template_register
+
+- name: Deploy Giropops App deployment
+  shell: kubectl apply -f /opt/giropops/app-v2-canary.yml
+  register: deploy_deployment_register
+EOF
+```
 
 
 
