@@ -1568,17 +1568,22 @@ ansible-playbook -i hosts main.yml
 
 * Criar uma máquina Ubuntu
 
+```
 sudo su -
+```
 
 # instalar ansible
 
+```
 sudo apt install -y software-properties-common
 sudo apt-add-repository --yes --update ppa:ansible/ansible
 sudo apt update
 sudo apt install -y ansible
+```
 
 # instalar docker
 
+```
 curl -fsSL https://get.docker.com | bash -
 
 apt-get install -y python-pip
@@ -1588,29 +1593,37 @@ pip install docker-compose==1.9.0
 apt-get install -y nodejs npm
 
 npm install npm --global
+```
 
 Clonar o repo do Ansible awx
 
+```
 git clone https://github.com/ansible/awx.git
 
 cd awx/installer
 
 cat install.yml
 cat inventory
+```
 
 
 
 Gerar um secretkey
 
+```
 openssl rand -hex 32
+```
 
+```
 ...
 project_data_dir
 
 grep -v '^#' inventory | grep - '^$' > inventory_limpo
+```
 
 ---
 
+```
 localhost ansible_connection=local ansible_python_interpreter="/usr/bin/env python"
 [all:vars]
 dockerhub_base=ansible
@@ -1632,12 +1645,15 @@ admin_password=giropops
 create_preload_data=True
 secret_key=91f1db6f6d7691121bcfa62708d59c2cd3f4aa9bd6f6d25f261395684c659dd3
 project_data_dir=/var/lib/awx/projects
+```
 
 ---
 
+```
 ansible-playbook -i inventory install.yml
 
 docker ps
+```
 
 Security group
 
@@ -1647,7 +1663,10 @@ Entra no ip
 
 Criar um projeto
 
+```
 cd awx/project
 mkdir opa
 cd opa
 ansible-galaxy init opa
+```
+
