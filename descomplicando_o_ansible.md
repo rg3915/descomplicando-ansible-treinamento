@@ -295,6 +295,7 @@ cat << EOF > hosts
 localhost ansible_connection=local ansible_python_interpreter=python gather_facts=false
 
 [kubernetes]
+EOF
 ```
 
 Copie a chave.pem.
